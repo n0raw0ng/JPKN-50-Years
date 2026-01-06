@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interactive Opening</title>
+    <style>
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: black; overflow: hidden; 
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #blackout {
+            position: absolute; width: 100%; height: 100%; 
+            background: black; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 10;
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); opacity: 1; }
+            15% { transform: scale(1.03); opacity: 0.9; }
+            30% { transform: scale(1); opacity: 1; }
+            45% { transform: scale(1.03); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #status-text { 
+            color: #00FF00; font-size: 6vw; letter-spacing: 5px; 
+            text-shadow: 0 0 10px #00FF00; 
+            animation: heartbeat 3s ease-in-out infinite;
+            text-align: center;
+        }
+
+        .sub-text {
+            color: #00FF00; font-size: 2vw; 
+            text-shadow: 0 0 5px #00FF00;
+            margin-top: -10px; letter-spacing: 2px;
+        }
+
+        #main-video { 
+            position: absolute; top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            object-fit: contain; display: none; 
+        }
+
+        /* KEYBOARD CONTAINER */
+        #keyboard-container {
+            position: absolute; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            background: rgba(5, 15, 5, 0.98); 
+            border: 1px solid #00FF00;
+            padding: 10px; border-radius: 8px; 
+            display: none; 
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            width: 260px; /* Small Default */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #keyboard-container.large-mode {
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .kbd-header {
+            display: flex; justify-content: flex-end; margin-bottom: 8px;
+        }
+
+        /* ENLARGE SYMBOL */
+        #size-toggle {
+            color: #00FF00; font-size: 18px; cursor: pointer;
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid #00FF00; border-radius: 4px;
+            background: rgba(0, 255, 0, 0.05);
+            transition: 0.2s;
+        }
+
+        #size-toggle:hover { background: rgba(0, 255, 0, 0.2); }
+
+        .kbd-grid {
+            display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px;
+        }
+
+        .key {
+            height: 28px; background: #000; border: 1px solid #00FF00;
+            color: #00FF00; font-size: 11px; font-family: inherit;
+            cursor: pointer; border-radius: 3px; display: flex;
+            align-items: center; justify-content: center;
+            transition: background 0.1s;
+        }
+
+        /* UI Adjustments for Large Mode */
+        .large-mode .key { height: 45px; font-size: 16px; }
+
+        .key:active { background: #00FF00; color: black; }
+        
+        .action-row {
+            display: grid; grid-template-columns: repeat(2, 1fr); 
+            gap: 6px; margin-top: 10px;
+        }
+
+        .key.wide { background: #082208; height: 32px; font-size: 10px; }
+        .key.enter { background: #00FF00; color: black; font-weight: bold; height: 32px; font-size: 10px; }
+        
+        .large-mode .key.wide, .large-mode .key.enter { height: 50px; font-size: 14px; }
+
+        /* INPUT AREA */
+        #controls { position: absolute; bottom: 20px; right: 20px; z-index: 20; }
+
+        input { 
+            padding: 10px; border: 2px solid transparent; 
+            background: transparent; color: transparent; 
+            width: 140px; font-size: 18px; text-align: center; 
+            font-family: inherit; outline: none; transition: all 0.3s ease;
+        }
+
+        input.active-glow {
+            border-color: #00FF00; color: #00FF00; background: #000;
+            box-shadow: 0 0 20px #00FF00; width: 180px;
+        }
+
+        @media (min-width: 768px) {
+            #keyboard-container { left: 20px; transform: none; }
+            .sub-text { font-size: 1.5vw; }
+        }
+    </style>
+</head>
+<body onclick="handleGlobalClick(event)">
+
+    <div id="blackout">
+        <h1 id="status-text">SYSTEM LOCKED</h1>
+        <p class="sub-text">AUTHENTICATION REQUIRED</p>
+    </div>
+
+    <div id="keyboard-container" onclick="event.stopPropagation()">
+        <div class="kbd-header">
+            <div id="size-toggle" onclick="toggleSize()">⤢</div>
+        </div>
+        <div class="kbd-grid" id="kbd-buttons"></div>
+        <div class="action-row">
+            <button class="key wide" onclick="clearInput()">CLEAR</button>
+            <button class="key enter" onclick="checkAccess()">UNLOCK</button>
+        </div>
+    </div>
+
+    <video id="main-video" playsinline preload="auto">
+        <source src="JPKN Outro.mp4" type="video/mp4"> 
+    </video>
+
+    <div id="controls" onclick="event.stopPropagation()">
+        <input type="text" id="pass-input" placeholder="PASSCODE" onclick="showKeyboard()" readonly>
+    </div>
+
+    <script>
+        const video = document.getElementById('main-video');
+        const passInput = document.getElementById('pass-input');
+        const kbd = document.getElementById('keyboard-container');
+        const kbdGrid = document.getElementById('kbd-buttons');
+        const sizeToggle = document.getElementById('size-toggle');
+
+        const chars = "1234567890QWERTYUIOPASDFGHJKLZXCVBNM".split("");
+        chars.forEach(char => {
+            let btn = document.createElement("button");
+            btn.className = "key";
+            btn.innerText = char;
+            btn.onclick = () => addChar(char);
+            kbdGrid.appendChild(btn);
+        });
+
+        function showKeyboard() {
+            kbd.style.display = "block";
+            passInput.classList.add('active-glow');
+        }
+
+        function toggleSize() {
+            kbd.classList.toggle('large-mode');
+            const isLarge = kbd.classList.contains('large-mode');
+            // Toggle for Expand (⤢) and Shrink (⤡) symbols
+            sizeToggle.innerText = isLarge ? "⤡" : "⤢";
+        }
+
+        function handleGlobalClick(event) {
+            if (kbd.style.display === "block") {
+                kbd.style.display = "none";
+                passInput.classList.remove('active-glow');
+            }
+        }
+
+        function addChar(val) { passInput.value += val; }
+        function clearInput() { passInput.value = ""; }
+
+        function checkAccess() {
+            if (passInput.value === "JPKN2026") {
+                document.getElementById('blackout').style.display = "none";
+                document.getElementById('controls').style.display = "none";
+                kbd.style.display = "none";
+                video.style.display = "block";
+                video.play().catch(e => { video.muted = true; video.play(); });
+            } else {
+                alert("ACCESS DENIED");
+                passInput.value = "";
+            }
+        }
+    </script>
+</body>
+</html>
