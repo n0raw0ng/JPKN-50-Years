@@ -32,5 +32,5 @@
 
 <h2 id="access">How to View</h2>
 <p>
-  To view the live site, navigate to the <strong>Settings</strong> tab of this repository, select <strong>Pages</strong>, and follow the link to the deployed site.
+ You can explore the live prototype by clicking the link located in the <strong>About</strong> section on the right-hand side of this repository page.
 </p>
